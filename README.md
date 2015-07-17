@@ -22,15 +22,20 @@ If you want to load an avatar archive to a user (and replace their current appea
 an archive. To do this, make sure that the user is logged in, then type the following into the console
 
 ### Loading Avatar Archive from URL
-load avatar archive <First> <Last> <url>
+###
+load avatar archive "First" "Last" "url"
+
+exclude the quotes!
 
 in which <First> is the user from above's first name, <Last> is the user from above's last name,
   <url> is the url that you want to load (including the extension .aa). ex (http://example.com/avatar.aa) Once you type this, 
   it will load the archive, and the avatar will be wearing the clothes from the archive the next time they log in.
   
 ### Loading Avatar Archive from file 
+###
+load avatar archive "First" "Last"
 
-load avatar archive <First> <Last> 
+exclude the quotes!
 
 in which <First> is the user from above's first name, <Last> is the user from above's last name,
   after you do this it will display a list of saved archives enter the archive name and it will load the archive.
