@@ -9,7 +9,7 @@ After this is done, then you'll type the following into the console
 save avatar archive <First> <Last> <Filename> <FolderNameToSaveInto> (--snapshot <UUID>) (--private)
 
 in which <First> is the user from above's first name, <Last> is the user from above's last name,
-  <Filename> is the file that you want to save it into (add the extension .aa),
+  <Filename> is the file that you want to save it into (DO NOT add the extension .aa it is auto added),
   <FolderNameToSaveInfo> is the folder name that will be created when this is loaded into a new
   avatar. The last two parameters are optional, but necessary for setting up default avatars.
   Adding "--snapshot <UUID>" will assign a screenshot to the archive, allowing a picture of it to be
