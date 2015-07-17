@@ -6,7 +6,7 @@ To create an avatar archive, you'll first set up a user on your sim, and have th
    the clothing and attachments that you want the archive to have.
 After this is done, then you'll type the following into the console
 
-save avatar archive <First> <Last> <password> <Filename> <FolderNameToSaveInto> (--snapshot <UUID>) (--private)
+save avatar archive "First" "Last" "password" "Filename" "FolderNameToSaveInto" (--snapshot <UUID>) (--private)
 
 in which <First> is the user from above's first name, <Last> is the user from above's last name,
 <password> is the avatars account password,
