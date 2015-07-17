@@ -15,6 +15,6 @@ namespace OpenSim.Framework
         /// <param name="FileName"></param>
         /// <param name="First"></param>
         /// <param name="Last"></param>
-        void LoadAvatarArchive(string FileName, string First, string Last);
+        void LoadAvatarArchive(string FileName, string First, string Last, string pass);
     }
 }

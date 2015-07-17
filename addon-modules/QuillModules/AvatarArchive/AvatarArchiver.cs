@@ -95,29 +95,17 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarArchiver
         {
             return;
         }
-        protected void HandleLoadwebAvatarArchive(string module, string[] cmdparams)
-        {
-            var client = new WebClient();
-            client.DownloadFile(cmdparams[5], "temp.aa");
-            string filename = "temp";
-
-            if (cmdparams.Length != 5)
-            {
-                m_log.Info("[AvatarArchive] Not enough parameters!");
-                return;
-            }
-            LoadAvatarArchive(filename, cmdparams[3], cmdparams[4]);
-        }
+        
         protected void HandleLoadAvatarArchive(string module, string[] cmdparams)
         {
             string filename;
-            string file = cmdparams[5];
+            string file = cmdparams[6];
             if (file.StartsWith("http://"))
             {
                 var client = new WebClient();
-                client.DownloadFile(cmdparams[5], "temp.aa");
+                client.DownloadFile(cmdparams[6], "temp.aa");
                 filename = "temp";
-                LoadAvatarArchive(filename, cmdparams[3], cmdparams[4]);
+                LoadAvatarArchive(filename, cmdparams[3], cmdparams[4], cmdparams[5]);
                 System.IO.File.Delete("temp.aa");
                 return;
             }
@@ -126,42 +114,37 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarArchiver
                 m_log.Info("[AvatarArchive] https not supported!");
                 return;
             }
-            
-            string dir = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
-            string[] filePaths = Directory.GetFiles(dir, "*.aa").Select(Path.GetFileNameWithoutExtension).Select(p => p.Substring(0)).ToArray();
-            m_log.Info("[AvatarArchive] Type Avatar Archive name From List Below\n");
-            for (int i = 0; i < filePaths.Length; ++i)
-            {
-                string path = filePaths[i];
-                Console.WriteLine(System.IO.Path.GetFileName(path));
-            }
-            filename = MainConsole.Instance.CmdPrompt("\nFilename?");
 
-            
-
-            if (cmdparams.Length != 5)
+            if (cmdparams.Length != 7)
             {
                 m_log.Info("[AvatarArchive] Not enough parameters!");
                 return;
             }
-            LoadAvatarArchive(filename, cmdparams[3], cmdparams[4]);
+            LoadAvatarArchive(cmdparams[6], cmdparams[3], cmdparams[4], cmdparams[5]);
         }
 
-        public void LoadAvatarArchive(string FileName, string First, string Last)
+        public void LoadAvatarArchive(string FileName, string First, string Last, string pass)
         {
-            UserAccount account = UserAccountService.GetUserAccount(om.UUID.Zero, First, Last);
-            m_log.Info("[AvatarArchive] Loading archive from " + FileName);
+            UserAccount account = GetUserInfo(First, Last, pass);
+
             if (account == null)
             {
-                m_log.Error("[AvatarArchive] User not found!");
+
                 return;
             }
 
-            StreamReader reader = new StreamReader(FileName+".aa");
-            string file = reader.ReadToEnd();
-            reader.Close();
-            reader.Dispose();
+            m_log.Info("[AvatarArchive] Loading archive from " + FileName);
 
+            try
+            {
+                StreamReader reader = new StreamReader(FileName + ".aa");
+
+
+
+                string file = reader.ReadToEnd();
+                reader.Close();
+                reader.Dispose();
+           
             ScenePresence SP;
             m_scene.TryGetScenePresence(account.PrincipalID, out SP);
             if (SP == null)
@@ -218,7 +201,12 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarArchiver
                     SP.ControllingClient.SendBulkUpdateInventory(itemCopy);
                 }
             }
-            m_log.Info("[AvatarArchive] Loaded archive from " + FileName+".aa");
+            m_log.Info("[AvatarArchive] Loaded archive from " + FileName + ".aa");
+            }
+            catch (Exception e)
+            {
+                m_log.Error("[AvatarArchive] "+ e.Message);
+            }
         }
 
         private InventoryItemBase GiveInventoryItem(UUID senderId, UUID recipient, InventoryItemBase item, InventoryFolderBase parentFolder)
@@ -276,26 +264,59 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarArchiver
             FolderNameToPlaceAppearanceIn = map["FolderName"].AsString();
             return appearance;
         }
+        protected UserAccount GetUserInfo(string firstName, string lastName, string pass)
+        {
+            UserAccount account
+                = m_scene.UserAccountService.GetUserAccount(m_scene.RegionInfo.ScopeID, firstName, lastName);
 
+            if (null == account)
+            {
+                m_log.ErrorFormat(
+                    "[AvatarArchive]: Failed to find user info for {0} {1}",
+                    firstName, lastName);
+                return null;
+            }
+
+            try
+            {
+                string encpass = Util.Md5Hash(pass);
+                if (m_scene.AuthenticationService.Authenticate(account.PrincipalID, encpass, 1) != string.Empty)
+                {
+                    return account;
+                }
+                else
+                {
+                    m_log.ErrorFormat(
+                        "[AvatarArchive]: Password for user {0} {1} incorrect.  Please try again.",
+                        firstName, lastName);
+                    return null;
+                }
+            }
+            catch (Exception e)
+            {
+                m_log.ErrorFormat("[AvatarArchive]: Could not authenticate password, {0}", e);
+                return null;
+            }
+        }
         protected void HandleSaveAvatarArchive(string module, string[] cmdparams)
         {
-            
-            
-            if (cmdparams.Length != 7)
+
+
+            if (cmdparams.Length != 8)
             {
                 m_log.Info("[AvatarArchive] Not enough parameters!");
                 return;
             }
-            string ext = Path.GetExtension(cmdparams[5]);
+            string ext = Path.GetExtension(cmdparams[6]);
             if (ext != "")
             {
                 m_log.Error("[AvatarArchive] Do not Specify File Extention, It is automaticly Added");
                 return;
             }
-            UserAccount account = UserAccountService.GetUserAccount(UUID.Zero, cmdparams[3], cmdparams[4]);
+            UserAccount account = GetUserInfo(cmdparams[3], cmdparams[4], cmdparams[5]);
             if (account == null)
             {
-                m_log.Error("[AvatarArchive] User not found!");
+
                 return;
             }
 
@@ -308,13 +329,13 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarArchiver
             AvatarAppearance appearance = AvatarService.GetAppearance(SP.UUID);
             if (appearance == null)
                 appearance = SP.Appearance;
-            StreamWriter writer = new StreamWriter(cmdparams[5]+".aa", false);
+            StreamWriter writer = new StreamWriter(cmdparams[6] + ".aa", false);
             OSDMap map = new OSDMap();
             OSDMap body = new OSDMap();
             OSDMap assets = new OSDMap();
             OSDMap items = new OSDMap();
             body = appearance.Pack();
-            body.Add("FolderName", OSD.FromString(cmdparams[6]));
+            body.Add("FolderName", OSD.FromString(cmdparams[7]));
 
             foreach (AvatarWearable wear in appearance.Wearables)
             {
@@ -341,7 +362,7 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarArchiver
             writer.Write(OSDParser.SerializeLLSDXmlString(map));
             writer.Close();
             writer.Dispose();
-            m_log.Info("[AvatarArchive] Saved archive to " + cmdparams[5] + ".aa");
+            m_log.Info("[AvatarArchive] Saved archive to " + cmdparams[6] + ".aa");
         }
 
         private void SaveAsset(UUID AssetID, OSDMap assetMap)
