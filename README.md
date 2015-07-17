@@ -8,13 +8,13 @@ After this is done, then you'll type the following into the console
 
 save avatar archive "First" "Last" "password" "Filename" "FolderNameToSaveInto" (--snapshot <UUID>) (--private)
 
-in which <First> is the user from above's first name, <Last> is the user from above's last name,
-<password> is the avatars account password,
-  <Filename> is the file that you want to save it into (DO NOT add the extension .aa it is auto added),
+in which "First" is the user from above's first name, "Last" is the user from above's last name,
+"password" is the avatars account password,
+  "Filename" is the file that you want to save it into (DO NOT add the extension .aa it is auto added),
   
-  <FolderNameToSaveInfo> is the folder name that will be created when this is loaded into a new
+  "FolderNameToSaveInfo" is the folder name that will be created when this is loaded into a new
   avatar. The last two parameters are optional, but necessary for setting up default avatars.
-  Adding "--snapshot <UUID>" will assign a screenshot to the archive, allowing a picture of it to be
+  Adding "--snapshot "UUID"" will assign a screenshot to the archive, allowing a picture of it to be
   set for the web interface. Adding "--private" will not allow the archive to be found by the web interface,
   and it's existance will disallow the archives use for default avatars.
   
@@ -29,8 +29,8 @@ load avatar archive "First" "Last" "password" "url"
 
 exclude the quotes!
 
-in which <First> is the user from above's first name, <Last> is the user from above's last name, <password> is the avatars password,
-  <url> is the url or file that you want to load ex (http://example.com/avatar.aa) Once you type this, 
+in which "First" is the user from above's first name, "Last" is the user from above's last name, "password" is the avatars password,
+  "url" is the url or file that you want to load ex (http://example.com/avatar.aa) Once you type this, 
   it will load the archive.
   
 ### Loading Avatar Archive from file 
@@ -39,7 +39,8 @@ load avatar archive "First" "Last" "password" "filename"
 
 exclude the quotes!
 
-in which <First> is the user from above's first name, <Last> is the user from above's last name, <password> is the avatars password,
- <filename> (exclude the file extention) is the url or file that you want to load ex (avatarArchive) Once you type this, 
+in which "First" is the user from above's first name, "Last" is the user from above's last name, <password> is the avatars password,
+ 
+ 'filename" (exclude the file extention) is the url or file that you want to load ex (avatarArchive) Once you type this, 
   it will load the archive.
   
