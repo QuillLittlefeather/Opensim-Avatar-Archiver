@@ -188,7 +188,7 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarArchiver
 
                 AvatarAppearance appearance = ConvertXMLToAvatarAppearance(bodyMap, out FolderNameToLoadInto);
 
-                appearance.Owner = account.PrincipalID;
+                //appearance.Owner = account.PrincipalID;
 
                 List<InventoryItemBase> items = new List<InventoryItemBase>();
 
