@@ -1,4 +1,30 @@
-﻿using System;
+﻿/*
+ * Copyright (c) Quill Littlefeather, http://qlittlefeather.com
+ * 
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the OpenSimulator Project nor the
+ *       names of its contributors may be used to endorse or promote products
+ *       derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE DEVELOPERS ``AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE CONTRIBUTORS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+using System;
 using System.Net;
 using System.Collections;
 using System.Collections.Generic;
@@ -36,7 +62,7 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarArchiver
         private IAssetService AssetService;
         private IUserAccountService UserAccountService;
         private IAvatarService AvatarService;
-
+        public UUID ItemID;
         public void Initialise(Nini.Config.IConfigSource source)
         {
         }
@@ -46,11 +72,11 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarArchiver
             if (m_scene == null)
                 m_scene = scene;
             m_scene.AddCommand(
-                    "Avatar Archive", this, "Avatar Archive",
-                    "\n\nsave avatar archive <First> <Last> <Filename> <FolderNameToSaveInto>  (--snapshot <UUID>) (--private) Saves appearance to an avatar archive file\n",
-                    "\nload avatar archive <First> <Last> (Past archives are listed just type a name from the list) Loads appearance from an avatar archive file",
-                    "\nload avatar archive <First> <Last> <url> (ex http://example.com/archive.aa) Loads appearance from an avatar archive from a web url",
-                    HandleHelpAvatarArchive);
+            "Avatar Archive", this, "Avatar Archive",
+            "\n\nsave avatar archive <First> <Last> <Filename> <FolderNameToSaveInto> (--snapshot <UUID>) (--private) Saves appearance to an avatar archive file\n",
+            "\nload avatar archive <First> <Last> (Past archives are listed just type a name from the list) Loads appearance from an avatar archive file",
+            "\nload avatar archive <First> <Last> <url> (ex http://example.com/archive.aa) Loads appearance from an avatar archive from a web url",
+            HandleHelpAvatarArchive);
 
 
             MainConsole.Instance.Commands.AddCommand("region", false, "save avatar archive", "save avatar archive <First> <Last> <Filename> <FolderNameToSaveInto>", "Saves appearance to an avatar archive archive (Note: put \"\" around the FolderName if you need more than one word)", HandleSaveAvatarArchive);
@@ -95,7 +121,7 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarArchiver
         {
             return;
         }
-        
+
         protected void HandleLoadAvatarArchive(string module, string[] cmdparams)
         {
             string filename;
@@ -144,68 +170,72 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarArchiver
                 string file = reader.ReadToEnd();
                 reader.Close();
                 reader.Dispose();
-           
-            ScenePresence SP;
-            m_scene.TryGetScenePresence(account.PrincipalID, out SP);
-            if (SP == null)
-                return; //Bad people!
 
-            SP.ControllingClient.SendAlertMessage("Appearance loading in progress...");
+                ScenePresence SP;
+                m_scene.TryGetScenePresence(account.PrincipalID, out SP);
+                if (SP == null)
+                    return; //Bad people!
 
-            string FolderNameToLoadInto = "";
+                SP.ControllingClient.SendAlertMessage("Appearance loading in progress...");
 
-            OSDMap map = ((OSDMap)OSDParser.DeserializeLLSDXml(file));
+                string FolderNameToLoadInto = "";
 
-            OSDMap assetsMap = ((OSDMap)map["Assets"]);
-            OSDMap itemsMap = ((OSDMap)map["Items"]);
-            OSDMap bodyMap = ((OSDMap)map["Body"]);
+                OSDMap map = ((OSDMap)OSDParser.DeserializeLLSDXml(file));
 
-            AvatarAppearance appearance = ConvertXMLToAvatarAppearance(bodyMap, out FolderNameToLoadInto);
+                OSDMap assetsMap = ((OSDMap)map["Assets"]);
+                OSDMap itemsMap = ((OSDMap)map["Items"]);
+                OSDMap bodyMap = ((OSDMap)map["Body"]);
 
-            appearance.Owner = account.PrincipalID;
+                AvatarAppearance appearance = ConvertXMLToAvatarAppearance(bodyMap, out FolderNameToLoadInto);
 
-            List<InventoryItemBase> items = new List<InventoryItemBase>();
+                appearance.Owner = account.PrincipalID;
 
-            InventoryFolderBase AppearanceFolder = InventoryService.GetFolderForType(account.PrincipalID, AssetType.Clothing);
+                List<InventoryItemBase> items = new List<InventoryItemBase>();
 
-            InventoryFolderBase folderForAppearance
+                InventoryFolderBase AppearanceFolder = InventoryService.GetFolderForType(account.PrincipalID, AssetType.Clothing);
+
+                InventoryFolderBase folderForAppearance
                 = new InventoryFolderBase(
-                    UUID.Random(), FolderNameToLoadInto, account.PrincipalID,
-                    -1, AppearanceFolder.ID, 1);
+                UUID.Random(), FolderNameToLoadInto, account.PrincipalID,
+                -1, AppearanceFolder.ID, 1);
 
-            InventoryService.AddFolder(folderForAppearance);
+                InventoryService.AddFolder(folderForAppearance);
 
-            folderForAppearance = InventoryService.GetFolder(folderForAppearance);
+                folderForAppearance = InventoryService.GetFolder(folderForAppearance);
 
-            try
-            {
-                LoadAssets(assetsMap);
-                LoadItems(itemsMap, account.PrincipalID, folderForAppearance, out items);
-            }
-            catch (Exception ex)
-            {
-                m_log.Warn("[AvatarArchiver]: Error loading assets and items, " + ex.ToString());
-            }
-
-            //Now update the client about the new items
-            SP.ControllingClient.SendBulkUpdateInventory(folderForAppearance);
-            foreach (InventoryItemBase itemCopy in items)
-            {
-                if (itemCopy == null)
+                try
                 {
-                    SP.ControllingClient.SendAgentAlertMessage("Can't find item to give. Nothing given.", false);
-                    continue;
+                    LoadAssets(assetsMap);
+                    LoadItems(itemsMap, account.PrincipalID, folderForAppearance, out items);
+
+
+
                 }
-                if (!SP.IsChildAgent)
+                catch (Exception ex)
                 {
-                    SP.ControllingClient.SendBulkUpdateInventory(itemCopy);
+                    m_log.Warn("[AvatarArchiver]: Error loading assets and items, " + ex.ToString());
                 }
-            }
-            m_log.Info("[AvatarArchive] Loaded archive from " + FileName + ".aa");
+
+
+                //Now update the client about the new items
+                SP.ControllingClient.SendBulkUpdateInventory(folderForAppearance);
+                foreach (InventoryItemBase itemCopy in items)
+                {
+                    if (itemCopy == null)
+                    {
+                        SP.ControllingClient.SendAgentAlertMessage("Can't find item to give. Nothing given.", false);
+                        continue;
+                    }
+                    if (!SP.IsChildAgent)
+                    {
+                        SP.ControllingClient.SendBulkUpdateInventory(itemCopy);
+                    }
+                }
+                m_log.Info("[AvatarArchive] Loaded archive from " + FileName + ".aa");
             }
             catch (Exception e)
             {
-                m_log.Error("[AvatarArchive] "+ e.Message);
+                m_log.Error("[AvatarArchive] " + e.Message);
             }
         }
 
@@ -228,6 +258,7 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarArchiver
             itemCopy.EveryOnePermissions = (uint)om.PermissionMask.All;
             itemCopy.CurrentPermissions = (uint)om.PermissionMask.All;
 
+
             if (parentFolder == null)
             {
                 InventoryFolderBase folder = InventoryService.GetFolderForType(recipient, (AssetType)itemCopy.AssetType);
@@ -243,6 +274,7 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarArchiver
                     else
                         return null; // No destination
                 }
+
             }
             else
                 itemCopy.Folder = parentFolder.ID; //We already have a folder to put it in
@@ -254,6 +286,7 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarArchiver
             itemCopy.SaleType = item.SaleType;
 
             InventoryService.AddItem(itemCopy);
+
             return itemCopy;
         }
 
@@ -264,16 +297,17 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarArchiver
             FolderNameToPlaceAppearanceIn = map["FolderName"].AsString();
             return appearance;
         }
+
         protected UserAccount GetUserInfo(string firstName, string lastName, string pass)
         {
             UserAccount account
-                = m_scene.UserAccountService.GetUserAccount(m_scene.RegionInfo.ScopeID, firstName, lastName);
+            = m_scene.UserAccountService.GetUserAccount(m_scene.RegionInfo.ScopeID, firstName, lastName);
 
             if (null == account)
             {
                 m_log.ErrorFormat(
-                    "[AvatarArchive]: Failed to find user info for {0} {1}",
-                    firstName, lastName);
+                "[AvatarArchive]: Failed to find user info for {0} {1}",
+                firstName, lastName);
                 return null;
             }
 
@@ -287,8 +321,8 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarArchiver
                 else
                 {
                     m_log.ErrorFormat(
-                        "[AvatarArchive]: Password for user {0} {1} incorrect.  Please try again.",
-                        firstName, lastName);
+                    "[AvatarArchive]: Password for user {0} {1} incorrect. Please try again.",
+                    firstName, lastName);
                     return null;
                 }
             }
@@ -336,25 +370,41 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarArchiver
             OSDMap items = new OSDMap();
             body = appearance.Pack();
             body.Add("FolderName", OSD.FromString(cmdparams[7]));
+            int wearCount = 0;
 
             foreach (AvatarWearable wear in appearance.Wearables)
             {
                 for (int i = 0; i < wear.Count; i++)
                 {
                     WearableItem w = wear[i];
-                    if (w.AssetID != UUID.Zero)
-                    {
-                        SaveAsset(w.AssetID, assets);
-                        SaveItem(w.ItemID, items);
-                    }
+
+                    SaveAsset(w.AssetID, assets);
+                    SaveItem(w.ItemID, items, assets);
+                    wearCount++;
+
                 }
             }
+
+            int attachCount = 0;
             List<AvatarAttachment> attachments = appearance.GetAttachments();
             foreach (AvatarAttachment a in attachments)
             {
-                SaveAsset(a.AssetID, assets);
-                SaveItem(a.ItemID, items);
+                UUID itemID = a.ItemID;
+                m_log.Info("[AvatarArchive] Saved attachment " + a.ItemID);
+                if (a.ItemID != UUID.Zero)
+                {
+                    SaveAsset(a.ItemID, assets);
+                    SaveItem(a.ItemID, items, assets);
+
+                    attachCount++;
+                }
             }
+            foreach (AvatarAttachment a in attachments.Where(a => a.AssetID != UUID.Zero))
+            {
+                SaveItem(a.ItemID, items, assets);
+                SaveAsset(a.AssetID, assets);
+            }
+
             map.Add("Body", body);
             map.Add("Assets", assets);
             map.Add("Items", items);
@@ -417,7 +467,7 @@ namespace OpenSim.Region.CoreModules.Avatar.AvatarArchiver
             return asset;
         }
 
-        private void SaveItem(UUID ItemID, OSDMap itemMap)
+        private void SaveItem(UUID ItemID, OSDMap itemMap, OSDMap assets)
         {
             InventoryItemBase saveItem = InventoryService.GetItem(new InventoryItemBase(ItemID));
             if (saveItem == null)
